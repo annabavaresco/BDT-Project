@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class InGestione:
-    def __init__(self, arancio: int, azzurro: int, bianco: int, giallo: int, rosso: int, verde: int):
+    def __init__(self, bianco: int, giallo: int, verde: int, azzurro: int, arancio: int, rosso: int):
         self.arancio = arancio
         self.azzurro = azzurro
         self.bianco = bianco
@@ -13,7 +13,7 @@ class InGestione:
         self.verde = verde
 
 class InAttesa:
-    def __init__(self, arancio: int, azzurro: int, bianco: int, giallo: int, rosso: int, verde: int):
+    def __init__(self, bianco: int, giallo: int, verde: int, azzurro: int, arancio: int, rosso: int):
         self.arancio = arancio
         self.azzurro = azzurro
         self.bianco = bianco
@@ -33,26 +33,26 @@ class Hospital:
 
 
 def from_dict_to_hosp(ospedale):
-    att = InAttesa(int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['arancio']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['azzurro']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['bianco']),
+    att = InAttesa(int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['bianco']),
                     int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['giallo']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['rosso']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['verde'])) 
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['verde']),
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['azzurro']),
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['arancio']),
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['rosso'])) 
 
     
-    gest = InGestione(int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['arancio'])+
-                     int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['arancio']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['azzurro'])+
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['azzurro']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['bianco'])+
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['bianco']),
+    gest = InGestione(int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['bianco'])+
+                     int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['bianco']),
                     int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['giallo'])+
                     int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['giallo']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['rosso'])+
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['rosso']),
                     int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['verde'])+
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['verde']))  
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['verde']),
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['azzurro'])+
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['azzurro']),
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['arancio'])+
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['arancio']),
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['rosso'])+
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['rosso']))  
 
 
     ret = Hospital(ospedale['risposta']['pronto_soccorso']['reparto']['codice'],
