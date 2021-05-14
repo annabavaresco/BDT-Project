@@ -21,7 +21,7 @@ connection = mysql.connector.connect(
 connection.autocommit = True
 cursor = connection.cursor()
 
-query = "insert into ers (timestamp, codice_ospedale, bianco_attesa,\
+query = "insert into ers2 (timestamp, codice_ospedale, bianco_attesa,\
     bianco_gestione, giallo_attesa, giallo_gestione, verde_attesa,\
         verde_gestione, azzurro_attesa, azzurro_gestione, arancio_attesa,\
             arancio_gestione, rosso_attesa, rosso_gestione)\
