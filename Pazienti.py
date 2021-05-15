@@ -1,6 +1,9 @@
 from Ospedali import Hospital, InAttesa, InGestione
 import mysql.connector 
 from pprint import pprint
+
+
+#TASSATVO CAPIRE COME RENDERE PIù EFFICIENTE GESTIONE COLORI
 #'005-PS-PS'
 #possiamo fare che nella funzione sotto il giorno deve per forza essere lunedì 
 def estrai_dati_settimanali(giorno, codice_ospedale): 
@@ -34,7 +37,7 @@ def from_db_to_hospital(db_row):
 
 
 class Paziente:
-    def __init__(self, ospedale, colore, altri, più_gravi, meno_gravi, t_inizio, t_fine, precedente):
+    def __init__(self, ospedale, colore, altri, più_gravi, meno_gravi, t_inizio, precedente):
         self.id_paziente = 'Gino' #da definire meglio
         self.ospedale = ospedale
         self.colore = colore
@@ -42,8 +45,8 @@ class Paziente:
         self.più_gravi = più_gravi
         self.meno_gravi = meno_gravi
         self.t_inizio = t_inizio
-        self.t_fine = t_fine
-        self.durata = t_fine-t_inizio
+        self.t_fine = None
+        self.durata = 0
         self.precedente = None
 
 class Coda: 
@@ -68,7 +71,7 @@ class Coda:
             self.coda = paziente
             self.lungh += 1
     
-    def remove(self, num: int):
+    def remove(self, num: int, timestamp_fine):
         if num > self.lungh:
             raise Exception('Stai cercando di rimuovere più pazienti di quanti ce ne sono\
                 in attesa!')
@@ -76,6 +79,10 @@ class Coda:
             raise Exception('La coda è vuota, non è possibile rimuovere pazienti!')
         for i in range(num):
             p = self.coda
+            p.t_fine = timestamp_fine
+
+            #Verificare che questo tipo di operazione si possa fare con le timestamp
+            p.durata = p.t_fine - p.t_inizio
             connection = mysql.connector.connect(
                 host = 'emergencyroom.ci8zphg60wmc.us-east-2.rds.amazonaws.com',
                 port =  3306,
@@ -108,4 +115,68 @@ class Coda:
                 p.precedente = None
                 self.lungh -= 1
 
-    
+def elabora_dati_settimanali(data, codice):
+
+    #I dati settimanali vengono recuperati dalla tabella "ers2" e convertiti\
+    #in oggetti della classe ospedale
+    dati = estrai_dati_settimanali(data, codice) #ha senso fare quelli settimanali??
+    ospedali = [from_db_to_hospital(dato) for dato in dati]
+
+    #Creazione di una queue per ogni colore
+
+    bianchi = Coda('bianco', codice)
+    gialli = Coda('giallo', codice)
+    verdi = Coda('verde', codice)
+    azzurri = Coda('azzurro', codice)
+    arancioni = Coda('arancio', codice)
+    rossi = Coda('rosso', codice)
+
+    #iteriamo per gli ospedali aggiungendo e rimuovendo pazienti dalla coda
+
+    prec = ospedali[0]
+    for ospedale in ospedali[1:]:
+        #casi in cui bisogna aggiungere pazienti alla coda
+        if ospedale.in_attesa.bianco > prec.in_attesa.bianco:
+            aum_att = ospedale.in_attesa.bianco - prec.in_attesa.bianco
+            
+            #Sono aumentati sia in attesa che in gestione
+            if ospedale.in_gestione.bianco > prec.in_gestione.bianco:
+                aum_gest = ospedale.in_gestione.bianco - prec.in_gestione.bianco
+                n = aum_gest + aum_att
+
+                for i in range(n):
+                    bianchi.add(PAZIENTE)
+
+                bianchi.remove(aum_gest, ospedale.timestamp)
+            
+            #Sono aumentati in attesa ma non in gestione
+            else:
+                n = aum_att
+            
+                for i in range(n):
+                    bianchi.add(PAZIENTE)# definire il paziente
+        
+        elif ospedale.in_attesa.bianco == prec.in_attesa.bianco:
+            if ospedale.in_gestione.bianco > prec.in_gestione.bianco:
+                aum_gest = ospedale.in_gestione.bianco - prec.in_gestione.bianco
+
+                for i in range(aum_gest):
+                    bianchi.add(PAZIENTE) # definire il paziente
+                
+                bianchi.remove(aum_gest, ospedale.timestamp)
+        
+        else:
+            dim_att = prec.in_attesa.bianco - ospedale.in_attesa.bianco
+            if ospedale.in_gestione.bianco > prec.in_gestione.bianco:
+                aum_gest = ospedale.in_gestione.bianco - prec.in_gestione.bianco
+                n = aum_gest - dim_att
+
+                for i in range(n):
+                    bianchi.add(PAZIENTE)
+                
+                bianchi.remove(aum_gest, ospedale.timestamp)
+            
+            else:
+                bianchi.remove(dim_att, ospedale.timestamp)
+            
+        prec = ospedale
