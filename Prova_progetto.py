@@ -22,17 +22,17 @@ connection.autocommit = True
 cursor = connection.cursor()
 
 query = "insert into ers2 (timestamp, codice_ospedale, bianco_attesa,\
-    bianco_gestione, giallo_attesa, giallo_gestione, verde_attesa,\
+    bianco_gestione, verde_attesa,\
         verde_gestione, azzurro_attesa, azzurro_gestione, arancio_attesa,\
             arancio_gestione, rosso_attesa, rosso_gestione)\
-                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
 for ospedale in ospedali:
-    cursor.execute(query, [ospedale.timestamp, ospedale.codice, ospedale.in_attesa.bianco,\
-        ospedale.in_gestione.bianco, ospedale.in_attesa.giallo, ospedale.in_gestione.giallo,\
-             ospedale.in_attesa.verde, ospedale.in_gestione.verde, ospedale.in_attesa.azzurro,\
-                 ospedale.in_gestione.azzurro, ospedale.in_attesa.arancio, ospedale.in_gestione.arancio,\
-                     ospedale.in_attesa.rosso, ospedale.in_gestione.rosso])
+    cursor.execute(query, [ospedale.timestamp, ospedale.codice, ospedale.in_attesa['bianco'],\
+        ospedale.in_gestione['bianco'],\
+             ospedale.in_attesa['verde'], ospedale.in_gestione['verde'], ospedale.in_attesa['azzurro'],\
+                 ospedale.in_gestione['azzurro'], ospedale.in_attesa['arancio'], ospedale.in_gestione['arancio'],\
+                     ospedale.in_attesa['rosso'], ospedale.in_gestione['rosso']])
 connection.close()
 
 

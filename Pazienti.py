@@ -1,7 +1,8 @@
-from Ospedali import Hospital, InAttesa, InGestione
+from mysql.connector.constants import _obsolete_option
+from Ospedali import Hospital
 import mysql.connector 
 from pprint import pprint
-
+from datetime import datetime, timedelta
 
 #TASSATVO CAPIRE COME RENDERE PIù EFFICIENTE GESTIONE COLORI
 #'005-PS-PS'
@@ -19,9 +20,9 @@ def estrai_dati_settimanali(giorno, codice_ospedale):
     cursor = connection.cursor()
 
     query = "SELECT * FROM prova.ers2 WHERE codice_ospedale = %s AND timestamp \
-             between '2021-05-05 00:00:00' AND '2021-05-12 23:59:59'"
+             between %s AND %s"
 
-    cursor.execute(query, [codice_ospedale])
+    cursor.execute(query, [codice_ospedale, giorno, giorno + timedelta(days=7)])
     
     result = cursor.fetchall()
     
@@ -30,8 +31,10 @@ def estrai_dati_settimanali(giorno, codice_ospedale):
     return result
 
 def from_db_to_hospital(db_row):
-    att = InAttesa(db_row[2], db_row[4], db_row[6], db_row[8], db_row[10], db_row[12])
-    gest = InGestione(db_row[3], db_row[5], db_row[7], db_row[9], db_row[11], db_row[13])
+    att = {'bianco':db_row[2], 'verde': db_row[6], \
+        'azzurro': db_row[8], 'arancio': db_row[10], 'rosso': db_row[12]}
+    gest = {'bianco': db_row[3], 'verde': db_row[7],\
+        'azzurro': db_row[9], 'arancio': db_row[11], 'rosso': db_row[13]}
     h = Hospital(db_row[1], gest, att, db_row[0])
     return h
 
@@ -50,8 +53,7 @@ class Paziente:
         self.precedente = None
 
 class Coda: 
-    def __init__(self, colore, codice_ospedale):
-        self.colore = colore
+    def __init__(self, codice_ospedale):
         self.codice_ospedale = codice_ospedale
         self.testa = None
         self.coda = None
@@ -115,7 +117,56 @@ class Coda:
                 p.precedente = None
                 self.lungh -= 1
 
+#Già testata e funziona
+def comp_più_gravi(colore, ospedale):
+    #dato un oggetto della classe ospedale, calcola quanti pazienti in attesa sono più gravi
+    # di quello del parametro 'colore'
+    col_list = ['verde', 'azzurro', 'arancio', 'rosso']
+    res = 0
+    if colore == 'bianco':
+        for c in col_list:
+            res += ospedale.in_attesa[c]
+    elif colore == 'verde':
+        for c in col_list[1:]:
+            res += ospedale.in_attesa[c]
+    elif colore == 'azzurro':
+        for c in col_list[2:]:
+            res += ospedale.in_attesa[c]
+    elif colore == 'arancio':
+        res += ospedale.in_attesa['rosso']
+    return res
+
+
+#Già testata e funziona
+def comp_meno_gravi(colore, ospedale):
+    #dato un oggetto della classe ospedale, calcola quanti pazienti in attesa sono meno gravi
+    # di quello del parametro 'colore'
+    col_list = ['arancio', 'azzurro', 'verde', 'bianco']
+    res = 0
+    if colore == 'rosso':
+        for c in col_list:
+            res += ospedale.in_attesa[c]
+    elif colore == 'arancio':
+        for c in col_list[1:]:
+            res += ospedale.in_attesa[c]
+    elif colore == 'azzurro':
+        for c in col_list[2:]:
+            res += ospedale.in_attesa[c]
+    elif colore == 'verde':
+        res += ospedale.in_attesa['bianco']
+    
+    return res
+
+def comp_stesso_colore(colore, ospedale):
+    res = 0
+    if ospedale.in_attesa[colore]>1:
+        res += ospedale.in_attesa[colore]-1
+    return res
+
+
 def elabora_dati_settimanali(data, codice):
+    #I parametri indicano la data di inizio settimana e il codice dell'ospedali per cui si
+    #vogliono estrarre i dati. 
 
     #I dati settimanali vengono recuperati dalla tabella "ers2" e convertiti\
     #in oggetti della classe ospedale
@@ -123,60 +174,74 @@ def elabora_dati_settimanali(data, codice):
     ospedali = [from_db_to_hospital(dato) for dato in dati]
 
     #Creazione di una queue per ogni colore
-
-    bianchi = Coda('bianco', codice)
-    gialli = Coda('giallo', codice)
-    verdi = Coda('verde', codice)
-    azzurri = Coda('azzurro', codice)
-    arancioni = Coda('arancio', codice)
-    rossi = Coda('rosso', codice)
+    code_ospedale = {'bianco': Coda(codice), 'giallo': Coda(codice), 'verde':Coda(codice),\
+        'azzurro': Coda(codice), 'arancio': Coda(codice), 'rosso': Coda(codice)}
 
     #iteriamo per gli ospedali aggiungendo e rimuovendo pazienti dalla coda
-
+    #tra i colori manca il giallo perché in realtà non ci dovrebbe essere nemmeno sul json
+    #iniziale, i colori ufficiali dei ps sono 5
+    cols = ['bianco', 'verde', 'azzurro', 'arancio', 'rosso']
     prec = ospedali[0]
     for ospedale in ospedali[1:]:
+        for col in cols:
+
         #casi in cui bisogna aggiungere pazienti alla coda
-        if ospedale.in_attesa.bianco > prec.in_attesa.bianco:
-            aum_att = ospedale.in_attesa.bianco - prec.in_attesa.bianco
+            if ospedale.in_attesa[col] > prec.in_attesa[col]:
+                aum_att = ospedale.in_attesa[col] - prec.in_attesa[col]
             
-            #Sono aumentati sia in attesa che in gestione
-            if ospedale.in_gestione.bianco > prec.in_gestione.bianco:
-                aum_gest = ospedale.in_gestione.bianco - prec.in_gestione.bianco
-                n = aum_gest + aum_att
+                #Sono aumentati sia in attesa che in gestione
+                if ospedale.in_gestione[col] > prec.in_gestione[col]:
+                    aum_gest = ospedale.in_gestione[col] - prec.in_gestione[col]
+                    n = aum_gest + aum_att
 
-                for i in range(n):
-                    bianchi.add(PAZIENTE)
+#    def __init__(self, ospedale, colore, altri, più_gravi, meno_gravi, t_inizio, precedente):
 
-                bianchi.remove(aum_gest, ospedale.timestamp)
+                    for i in range(n):
+                        code_ospedale[col].add(Paziente(codice, col, \
+                            comp_stesso_colore(col, ospedale),comp_più_gravi(col, ospedale),\
+                                comp_meno_gravi(col, ospedale), ospedale.timestamp))
+
+                    code_ospedale[col].remove(aum_gest, ospedale.timestamp)
             
             #Sono aumentati in attesa ma non in gestione
-            else:
-                n = aum_att
+                else:
+                    n = aum_att
             
-                for i in range(n):
-                    bianchi.add(PAZIENTE)# definire il paziente
+                    for i in range(n):
+                        code_ospedale[col].add(Paziente(codice, col, \
+                            comp_stesso_colore(col, ospedale),comp_più_gravi(col, ospedale),\
+                                comp_meno_gravi(col, ospedale), ospedale.timestamp))
         
-        elif ospedale.in_attesa.bianco == prec.in_attesa.bianco:
-            if ospedale.in_gestione.bianco > prec.in_gestione.bianco:
-                aum_gest = ospedale.in_gestione.bianco - prec.in_gestione.bianco
+            elif ospedale.in_attesa[col] == prec.in_attesa[col]:
+                if ospedale.in_gestione[col] > prec.in_gestione[col]:
+                    aum_gest = ospedale.in_gestione[col] - prec.in_gestione[col]
 
-                for i in range(aum_gest):
-                    bianchi.add(PAZIENTE) # definire il paziente
+                    for i in range(aum_gest):
+                        code_ospedale[col].add(Paziente(codice, col, \
+                            comp_stesso_colore(col, ospedale),comp_più_gravi(col, ospedale),\
+                                comp_meno_gravi(col, ospedale), ospedale.timestamp))
                 
-                bianchi.remove(aum_gest, ospedale.timestamp)
+                    code_ospedale[col].remove(aum_gest, ospedale.timestamp)
         
-        else:
-            dim_att = prec.in_attesa.bianco - ospedale.in_attesa.bianco
-            if ospedale.in_gestione.bianco > prec.in_gestione.bianco:
-                aum_gest = ospedale.in_gestione.bianco - prec.in_gestione.bianco
-                n = aum_gest - dim_att
-
-                for i in range(n):
-                    bianchi.add(PAZIENTE)
-                
-                bianchi.remove(aum_gest, ospedale.timestamp)
-            
             else:
-                bianchi.remove(dim_att, ospedale.timestamp)
+                dim_att = prec.in_attesa[col] - ospedale.in_attesa[col]
+                if ospedale.in_gestione[col] > prec.in_gestione[col]:
+                    aum_gest = ospedale.in_gestione[col] - prec.in_gestione[col]
+                    n = aum_gest - dim_att
+
+                    for i in range(n):
+                        code_ospedale[col].add(Paziente(codice, col, \
+                            comp_stesso_colore(col, ospedale),comp_più_gravi(col, ospedale),\
+                                comp_meno_gravi(col, ospedale), ospedale.timestamp))
+                
+                    code_ospedale[col].remove(aum_gest, ospedale.timestamp)
             
-        prec = ospedale
+                else:
+                    code_ospedale[col].remove(dim_att, ospedale.timestamp)
+            
+            prec = ospedale
+
+s1 = '2021-05-03 00:00:00'
+FMT = '%Y-%m-%d %H:%M:%S'
+d1 = datetime.strptime(s1, FMT)
+elabora_dati_settimanali(d1, '014-PS-PS')

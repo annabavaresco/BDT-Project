@@ -1,29 +1,27 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+import requests
+import json
+from pprint import pprint
 
+#--------------------------------------------------------------------------
 
+#Piccolo pro memoria su come funzionano le timestamps
 
+s1 = '2021-05-30 10:33:26'
+s2 = '2021-05-31 11:15:49' # for example
+FMT = '%Y-%m-%d %H:%M:%S'
+d1 = datetime.strptime(s1, FMT)
+d2 = datetime.strptime(s2, FMT)
+d3 = d1 + timedelta(days=7)
+print(d3)
 
-class InGestione:
-    def __init__(self, bianco: int, giallo: int, verde: int, azzurro: int, arancio: int, rosso: int):
-        self.arancio = arancio
-        self.azzurro = azzurro
-        self.bianco = bianco
-        self.giallo = giallo
-        self.rosso = rosso
-        self.verde = verde
+#print(d2-d1)
 
-class InAttesa:
-    def __init__(self, bianco: int, giallo: int, verde: int, azzurro: int, arancio: int, rosso: int):
-        self.arancio = arancio
-        self.azzurro = azzurro
-        self.bianco = bianco
-        self.giallo = giallo
-        self.rosso = rosso
-        self.verde = verde
+#----------------------------------------------------------------------------------
 
 class Hospital:
 
-    def __init__(self, code: str, in_gestione: InGestione, in_attesa: InAttesa, timestamp):
+    def __init__(self, code: str, in_gestione: dict(), in_attesa: dict(), timestamp):
         
         self.in_attesa = in_attesa
         self.codice = code
@@ -33,26 +31,23 @@ class Hospital:
 
 
 def from_dict_to_hosp(ospedale):
-    att = InAttesa(int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['bianco']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['giallo']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['verde']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['azzurro']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['arancio']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['rosso'])) 
+    att = {'bianco':int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['bianco']),\
+            'verde': int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['verde']),\
+                'azzurro': int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['azzurro']),\
+                    'arancio': int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['arancio']),\
+                        'rosso': int(ospedale['risposta']['pronto_soccorso']['reparto']['attesa']['rosso'])}
 
     
-    gest = InGestione(int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['bianco'])+
-                     int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['bianco']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['giallo'])+
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['giallo']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['verde'])+
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['verde']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['azzurro'])+
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['azzurro']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['arancio'])+
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['arancio']),
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['rosso'])+
-                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['rosso']))  
+    gest = {'bianco':int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['bianco'])+
+                     int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['bianco']),\
+                        'verde': int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['verde'])+
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['verde']),\
+                        'azzurro': int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['azzurro'])+
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['azzurro']),\
+                        'arancio': int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['arancio'])+
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['arancio']),\
+                        'rosso': int(ospedale['risposta']['pronto_soccorso']['reparto']['ambulatorio']['rosso'])+
+                    int(ospedale['risposta']['pronto_soccorso']['reparto']['osservazione']['rosso'])} 
 
 
     ret = Hospital(ospedale['risposta']['pronto_soccorso']['reparto']['codice'],
@@ -68,4 +63,14 @@ def from_lod_to_los(lista_di_dizionari):
         ret.append(from_dict_to_hosp(dizionario))
     return ret
 
+resp = requests.get('https://servizi.apss.tn.it/opendata/STATOPS001.json')
+hosp = resp.json()
+#pprint(hosp[0])
+h = from_dict_to_hosp(hosp[0])
+#print(type(h.timestamp))
+#dt1 = datetime.strptime('2021-05-30 11:30:00',"%d/%m/%Y %H:%M")
+#dt2 = '2021-05-30 11:40:00'
+#print(type(dt1))
+c = ['azzurro', 'arancio']
+#from datetime import datetime
 
