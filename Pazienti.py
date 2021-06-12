@@ -6,8 +6,11 @@ from datetime import datetime, timedelta
 
 #TASSATVO CAPIRE COME RENDERE PIù EFFICIENTE GESTIONE COLORI
 #'005-PS-PS'
-#possiamo fare che nella funzione sotto il giorno deve per forza essere lunedì 
-def estrai_dati_settimanali(giorno, codice_ospedale): 
+#possiamo fare che nella funzione sotto il giorno deve per forza essere lunedì
+
+GIORNO = datetime.strptime('2021-05-04 19:10:00', '%Y-%m-%d %H:%M:%S')
+   
+def estrai_dati(giorno_inizio, codice_ospedale): 
     connection = mysql.connector.connect(
     host = 'emergencyroom.ci8zphg60wmc.us-east-2.rds.amazonaws.com',
     port =  3306,
@@ -22,7 +25,8 @@ def estrai_dati_settimanali(giorno, codice_ospedale):
     query = "SELECT * FROM prova.ers2 WHERE codice_ospedale = %s AND timestamp \
              between %s AND %s"
 
-    cursor.execute(query, [codice_ospedale, giorno, giorno + timedelta(days=7)])
+    oggi = datetime.strptime('2021-06-12 10:40:00', '%Y-%m-%d %H:%M:%S')
+    cursor.execute(query, [codice_ospedale, giorno_inizio, oggi])
     
     result = cursor.fetchall()
     
@@ -41,7 +45,7 @@ def from_db_to_hospital(db_row):
 
 class Paziente:
     def __init__(self, ospedale, colore, altri, più_gravi, meno_gravi, t_inizio, precedente = None):
-        self.id_paziente = 'Gino' #da definire meglio
+        self.id_paziente = 'P' #da definire meglio
         self.ospedale = ospedale
         self.colore = colore
         self.altri = altri
@@ -164,13 +168,13 @@ def comp_stesso_colore(colore, ospedale):
     return res
 
 
-def elabora_dati_settimanali(data, codice):
+def elabora_dati(dati, codice):
     #I parametri indicano la data di inizio settimana e il codice dell'ospedali per cui si
     #vogliono estrarre i dati. 
 
     #I dati settimanali vengono recuperati dalla tabella "ers2" e convertiti\
     #in oggetti della classe ospedale
-    dati = estrai_dati_settimanali(data, codice) #ha senso fare quelli settimanali??
+
     ospedali = [from_db_to_hospital(dato) for dato in dati]
 
     #Creazione di una queue per ogni colore
@@ -182,12 +186,21 @@ def elabora_dati_settimanali(data, codice):
     #iniziale, i colori ufficiali dei ps sono 5
     cols = ['bianco', 'verde', 'azzurro', 'arancio', 'rosso']
     prec = ospedali[0]
+    
+    #Iniziamo le code inserendo in ognuna il numero di pazienti che c'erano in attesa al 
+    # momento della prima timestamp. Il timestamp di inizio putroppo non sarà accurato,
+    # però non ci si può fare niente
+    for col in cols:
+        num_att = prec.in_attesa[col]
+        for i in range(num_att):
+            code_ospedale[col].add(Paziente(codice, col, \
+                            comp_stesso_colore(col, prec),comp_più_gravi(col, prec),\
+                                comp_meno_gravi(col, prec), prec.timestamp))
+    # Adesso iteriamo per gli ospedali successivi al primo e inseriamo i pazienti in modo
+    # un po' più preciso
     for ospedale in ospedali[1:]:
         
         for col in cols:
-            if col == 'bianco':
-                print(code_ospedale['bianco'].lungh, ospedale.timestamp)
-
         #casi in cui bisogna aggiungere pazienti alla coda
             if ospedale.in_attesa[col] > prec.in_attesa[col]:
                 aum_att = ospedale.in_attesa[col] - prec.in_attesa[col]
@@ -244,9 +257,5 @@ def elabora_dati_settimanali(data, codice):
             
             prec = ospedale
 
-s1 = '2021-05-10 00:00:00'
-FMT = '%Y-%m-%d %H:%M:%S'
-d1 = datetime.strptime(s1, FMT)
-elabora_dati_settimanali(d1, '014-PS-PS')
-# from pprint import pprint
-# pprint(estrai_dati_settimanali(d1, '014-PS-PS'))
+DATI = estrai_dati(GIORNO, '014-PS-PS')
+elabora_dati(DATI, '014-PS-PS')
