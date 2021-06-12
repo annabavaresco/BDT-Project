@@ -4,9 +4,6 @@ import mysql.connector
 from pprint import pprint
 from datetime import datetime, timedelta
 
-#TASSATVO CAPIRE COME RENDERE PIù EFFICIENTE GESTIONE COLORI
-#'005-PS-PS'
-#possiamo fare che nella funzione sotto il giorno deve per forza essere lunedì 
 def estrai_dati_settimanali(giorno, codice_ospedale): 
     connection = mysql.connector.connect(
     host = 'emergencyroom.ci8zphg60wmc.us-east-2.rds.amazonaws.com',
@@ -244,9 +241,10 @@ def elabora_dati_settimanali(data, codice):
             
             prec = ospedale
 
-s1 = '2021-05-10 00:00:00'
-FMT = '%Y-%m-%d %H:%M:%S'
-d1 = datetime.strptime(s1, FMT)
-elabora_dati_settimanali(d1, '014-PS-PS')
+# s1 = '2021-05-10 00:00:00'
+# FMT = '%Y-%m-%d %H:%M:%S'
+# d1 = datetime.strptime(s1, FMT)
+# elabora_dati_settimanali(d1, '014-PS-PS')
 # from pprint import pprint
 # pprint(estrai_dati_settimanali(d1, '014-PS-PS'))
+
