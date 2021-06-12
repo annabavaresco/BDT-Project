@@ -40,7 +40,7 @@ def from_db_to_hospital(db_row):
 
 
 class Paziente:
-    def __init__(self, ospedale, colore, altri, più_gravi, meno_gravi, t_inizio, precedente):
+    def __init__(self, ospedale, colore, altri, più_gravi, meno_gravi, t_inizio, precedente = None):
         self.id_paziente = 'Gino' #da definire meglio
         self.ospedale = ospedale
         self.colore = colore
@@ -50,7 +50,7 @@ class Paziente:
         self.t_inizio = t_inizio
         self.t_fine = None
         self.durata = 0
-        self.precedente = None
+        self.precedente = precedente
 
 class Coda: 
     def __init__(self, codice_ospedale):
@@ -98,10 +98,10 @@ class Coda:
 
             query = "insert into pazienti_prova (id, colore, ospedale, inizio, fine, durata,\
                 altri, più_gravi, meno_gravi)\
-                    values (p.id_paziente, p.colore, p.ospedale, p.t_inizio, p.t_fine, \
-                        p.durata, p.altri,p.più_gravi, p.meno_gravi)"
+                    values (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
-            cursor.execute(query)
+            cursor.execute(query, [p.id_paziente, p.colore, p.ospedale, p.t_inizio, p.t_fine, \
+                        p.durata, p.altri,p.più_gravi, p.meno_gravi])
             connection.close()
             
             if self.lungh == 1 :
@@ -183,7 +183,10 @@ def elabora_dati_settimanali(data, codice):
     cols = ['bianco', 'verde', 'azzurro', 'arancio', 'rosso']
     prec = ospedali[0]
     for ospedale in ospedali[1:]:
+        
         for col in cols:
+            if col == 'bianco':
+                print(code_ospedale['bianco'].lungh, ospedale.timestamp)
 
         #casi in cui bisogna aggiungere pazienti alla coda
             if ospedale.in_attesa[col] > prec.in_attesa[col]:
@@ -241,7 +244,9 @@ def elabora_dati_settimanali(data, codice):
             
             prec = ospedale
 
-s1 = '2021-05-03 00:00:00'
+s1 = '2021-05-10 00:00:00'
 FMT = '%Y-%m-%d %H:%M:%S'
 d1 = datetime.strptime(s1, FMT)
 elabora_dati_settimanali(d1, '014-PS-PS')
+# from pprint import pprint
+# pprint(estrai_dati_settimanali(d1, '014-PS-PS'))
