@@ -4,10 +4,6 @@ import mysql.connector
 from pprint import pprint
 from datetime import datetime, timedelta
 
-#TASSATVO CAPIRE COME RENDERE PIù EFFICIENTE GESTIONE COLORI
-#'005-PS-PS'
-#possiamo fare che nella funzione sotto il giorno deve per forza essere lunedì
-
 GIORNO = datetime.strptime('2021-05-04 19:10:00', '%Y-%m-%d %H:%M:%S')
    
 def estrai_dati(giorno_inizio, codice_ospedale): 
@@ -44,12 +40,12 @@ def from_db_to_hospital(db_row):
 
 
 class Paziente:
-    def __init__(self, ospedale, colore, altri, più_gravi, meno_gravi, t_inizio, precedente = None):
+    def __init__(self, ospedale, colore, altri, piu_gravi, meno_gravi, t_inizio, precedente = None):
         self.id_paziente = 'P' #da definire meglio
         self.ospedale = ospedale
         self.colore = colore
         self.altri = altri
-        self.più_gravi = più_gravi
+        self.piu_gravi = piu_gravi
         self.meno_gravi = meno_gravi
         self.t_inizio = t_inizio
         self.t_fine = None
@@ -105,7 +101,7 @@ class Coda:
                     values (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
             cursor.execute(query, [p.id_paziente, p.colore, p.ospedale, p.t_inizio, p.t_fine, \
-                        p.durata, p.altri,p.più_gravi, p.meno_gravi])
+                        p.durata, p.altri,p.piu_gravi, p.meno_gravi])
             connection.close()
             
             if self.lungh == 1 :
@@ -122,49 +118,49 @@ class Coda:
                 self.lungh -= 1
 
 #Già testata e funziona
-def comp_più_gravi(colore, ospedale):
+def comp_piu_gravi(colore, attesa):
     #dato un oggetto della classe ospedale, calcola quanti pazienti in attesa sono più gravi
     # di quello del parametro 'colore'
     col_list = ['verde', 'azzurro', 'arancio', 'rosso']
     res = 0
     if colore == 'bianco':
         for c in col_list:
-            res += ospedale.in_attesa[c]
+            res += attesa[c]
     elif colore == 'verde':
         for c in col_list[1:]:
-            res += ospedale.in_attesa[c]
+            res += attesa[c]
     elif colore == 'azzurro':
         for c in col_list[2:]:
-            res += ospedale.in_attesa[c]
+            res += attesa[c]
     elif colore == 'arancio':
-        res += ospedale.in_attesa['rosso']
+        res += attesa['rosso']
     return res
 
 
 #Già testata e funziona
-def comp_meno_gravi(colore, ospedale):
+def comp_meno_gravi(colore, attesa):
     #dato un oggetto della classe ospedale, calcola quanti pazienti in attesa sono meno gravi
     # di quello del parametro 'colore'
     col_list = ['arancio', 'azzurro', 'verde', 'bianco']
     res = 0
     if colore == 'rosso':
         for c in col_list:
-            res += ospedale.in_attesa[c]
+            res += attesa[c]
     elif colore == 'arancio':
         for c in col_list[1:]:
-            res += ospedale.in_attesa[c]
+            res += attesa[c]
     elif colore == 'azzurro':
         for c in col_list[2:]:
-            res += ospedale.in_attesa[c]
+            res += attesa[c]
     elif colore == 'verde':
-        res += ospedale.in_attesa['bianco']
+        res += attesa['bianco']
     
     return res
 
-def comp_stesso_colore(colore, ospedale):
+def comp_stesso_colore(colore, attesa):
     res = 0
-    if ospedale.in_attesa[colore]>1:
-        res += ospedale.in_attesa[colore]-1
+    if attesa[colore]>1:
+        res += attesa[colore]-1
     return res
 
 
@@ -194,7 +190,7 @@ def elabora_dati(dati, codice):
         num_att = prec.in_attesa[col]
         for i in range(num_att):
             code_ospedale[col].add(Paziente(codice, col, \
-                            comp_stesso_colore(col, prec),comp_più_gravi(col, prec),\
+                            comp_stesso_colore(col, prec),comp_piu_gravi(col, prec),\
                                 comp_meno_gravi(col, prec), prec.timestamp))
     # Adesso iteriamo per gli ospedali successivi al primo e inseriamo i pazienti in modo
     # un po' più preciso
@@ -214,7 +210,7 @@ def elabora_dati(dati, codice):
 
                     for i in range(n):
                         code_ospedale[col].add(Paziente(codice, col, \
-                            comp_stesso_colore(col, ospedale),comp_più_gravi(col, ospedale),\
+                            comp_stesso_colore(col, ospedale),comp_piu_gravi(col, ospedale),\
                                 comp_meno_gravi(col, ospedale), ospedale.timestamp))
 
                     code_ospedale[col].remove(aum_gest, ospedale.timestamp)
@@ -225,7 +221,7 @@ def elabora_dati(dati, codice):
             
                     for i in range(n):
                         code_ospedale[col].add(Paziente(codice, col, \
-                            comp_stesso_colore(col, ospedale),comp_più_gravi(col, ospedale),\
+                            comp_stesso_colore(col, ospedale),comp_piu_gravi(col, ospedale),\
                                 comp_meno_gravi(col, ospedale), ospedale.timestamp))
         
             elif ospedale.in_attesa[col] == prec.in_attesa[col]:
@@ -234,7 +230,7 @@ def elabora_dati(dati, codice):
 
                     for i in range(aum_gest):
                         code_ospedale[col].add(Paziente(codice, col, \
-                            comp_stesso_colore(col, ospedale),comp_più_gravi(col, ospedale),\
+                            comp_stesso_colore(col, ospedale),comp_piu_gravi(col, ospedale),\
                                 comp_meno_gravi(col, ospedale), ospedale.timestamp))
                 
                     code_ospedale[col].remove(aum_gest, ospedale.timestamp)
@@ -247,7 +243,7 @@ def elabora_dati(dati, codice):
 
                     for i in range(n):
                         code_ospedale[col].add(Paziente(codice, col, \
-                            comp_stesso_colore(col, ospedale),comp_più_gravi(col, ospedale),\
+                            comp_stesso_colore(col, ospedale),comp_piu_gravi(col, ospedale),\
                                 comp_meno_gravi(col, ospedale), ospedale.timestamp))
                 
                     code_ospedale[col].remove(aum_gest, ospedale.timestamp)
@@ -257,5 +253,5 @@ def elabora_dati(dati, codice):
             
             prec = ospedale
 
-DATI = estrai_dati(GIORNO, '014-PS-PS')
-elabora_dati(DATI, '014-PS-PS')
+#DATI = estrai_dati(GIORNO, '014-PS-PS')
+#elabora_dati(DATI, '014-PS-PS')
