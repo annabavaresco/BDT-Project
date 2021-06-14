@@ -17,21 +17,30 @@ def from_patient_to_dict(pat: Paziente):
         "meno_gravi" : pat.meno_gravi,
         "t_inizio" : str(pat.t_inizio),
         "t_fine" : str(pat.t_fine),
-        "durata": pat.durata
+        "durata": str(pat.durata)
     }
 
     return ret
 
 def from_dict_to_patient(d: dict):
-    pat = Paziente(d["id_paziente"], #da definire meglio,
+    start = datetime.strptime(d["t_inizio"], '%Y-%m-%d %H:%M:%S')
+    if (d["t_fine"] is None) or (d["t_fine"] == 'None'):
+        end = None
+        last = 0
+    else:
+
+        end = datetime.strptime(d["t_fine"], '%Y-%m-%d %H:%M:%S')
+        last = end - start
+
+    pat = Paziente(
         d["ospedale"],
         d["colore"],
         d["altri"],
         d["piu_gravi"],
         d["meno_gravi"],
-        datetime.strptime(d["t_inizio"], '%Y-%m-%d %H:%M:%S'),
-        d["t_fine"],
-        d["durata"])
+        start)
+    pat.t_fine = end
+    pat.durata = last
     
     return pat
 
@@ -43,10 +52,10 @@ def from_loh_to_dict(hospitals):
     ret = dict()
     for h in hospitals:
         ret[h.codice] = {"in_attesa": h.in_attesa, "in_gestione": h.in_gestione,
-        "timestamp": h.timestamp}
+        "timestamp": str(h.timestamp)}
     return ret
     
-def add_patient(pat, code, color):
+def add_patient(pat: Paziente, code: str, color: str):
     with open("Code_ps.json", "r") as f:
         hospitals = json.load(f)
     p = from_patient_to_dict(pat)
@@ -65,10 +74,10 @@ def remove_patient(num: int, end_timestamp, code, color):
     if len(hospitals[code][color]) == 0:
         raise Exception('La coda è vuota, non è possibile rimuovere pazienti!')
     for i in range(num):
-        p = hospitals[code][color].pop(0)
+        p = from_dict_to_patient(hospitals[code][color].pop(0))
         p.t_fine = str(end_timestamp)
-
-        p.durata = str(p.t_fine - datetime.strptime(p.t_inizio, '%Y-%m-%d %H:%M:%S'))
+        p.t_fine = datetime.strptime(p.t_fine, '%Y-%m-%d %H:%M:%S')
+        p.durata = p.t_fine - p.t_inizio
         connection = mysql.connector.connect(
             host = 'emergencyroom.ci8zphg60wmc.us-east-2.rds.amazonaws.com',
             port =  3306,
@@ -81,7 +90,7 @@ def remove_patient(num: int, end_timestamp, code, color):
         cursor = connection.cursor()
 
         query = "insert into pazienti_prova (id, colore, ospedale, inizio, fine, durata,\
-            altri, piu_gravi, meno_gravi)\
+            altri, più_gravi, meno_gravi)\
                 values (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
         cursor.execute(query, [p.id_paziente, p.colore, p.ospedale, p.t_inizio, p.t_fine, \
@@ -116,9 +125,9 @@ def elabora_dati():
     codes = ['001-PS-PSC','001-PS-PSG','001-PS-PSO','001-PS-PSP','001-PS-PS','006-PS-PS',\
         '007-PS-PS','010-PS-PS','004-PS-PS','014-PS-PS','005-PS-PS']
 
-    prev_data_dict = get_prev()
+    prev = get_prev()
 
-    if len(prev_data_dict) == 0:
+    if len(prev) == 0:
         prev_raw_data = requests.get('https://servizi.apss.tn.it/opendata/STATOPS001.json').json()
         prev_data_list = [from_dict_to_hosp(h) for h in prev_raw_data]
         
@@ -132,13 +141,14 @@ def elabora_dati():
 
                 for i in range(n):
                     add_patient(p, h.codice, c)
-                
-                time.sleep(600)
+
+        prev = from_loh_to_dict(prev_data_list)        
+        time.sleep(600)
     
     current_raw_data = requests.get('https://servizi.apss.tn.it/opendata/STATOPS001.json').json()
     current_data_list = [from_dict_to_hosp(h) for h in current_raw_data]
     current = from_loh_to_dict(current_data_list)
-    prev = from_loh_to_dict(prev_data_list)
+    
 
     # Adesso iteriamo per gli ospedali successivi al primo e inseriamo i pazienti in modo
     # un po' più preciso
@@ -149,54 +159,54 @@ def elabora_dati():
                 aum_att = current[c]['in_attesa'][col] - prev[c]['in_attesa'][col]
             
                 #Sono aumentati sia in attesa che in gestione
-                if current[c]['in_gestione'][col] > prev['in_gestione'][col]:
-                    aum_gest = current[c]['in_gestione'][col] - prev['in_gestione'][col]
+                if current[c]['in_gestione'][col] > prev[c]['in_gestione'][col]:
+                    aum_gest = current[c]['in_gestione'][col] - prev[c]['in_gestione'][col]
                     n = aum_gest + aum_att
 
 #    def __init__(self, ospedale, colore, altri, più_gravi, meno_gravi, t_inizio, precedente):
 
                     for i in range(n):
-                        add_patient(Paziente(c, col, comp_stesso_colore(col, current['in_attesa']),\
-                            comp_piu_gravi(col, current['in_attesa']),\
-                                comp_meno_gravi(col, current['in_attesa']), current['timestamp']),c,col)
+                        add_patient(Paziente(c, col, comp_stesso_colore(col, current[c]['in_attesa']),\
+                            comp_piu_gravi(col, current[c]['in_attesa']),\
+                                comp_meno_gravi(col, current[c]['in_attesa']), current[c]['timestamp']),c,col)
 
-                    remove_patient(aum_gest, current['timestamp'], c, col)
+                    remove_patient(aum_gest, current[c]['timestamp'], c, col)
             
             #Sono aumentati in attesa ma non in gestione
                 else:
                     n = aum_att
             
                     for i in range(n):
-                        add_patient(Paziente(c, col, comp_stesso_colore(col, current['in_attesa']),\
-                            comp_piu_gravi(col, current['in_attesa']),\
-                                comp_meno_gravi(col, current['in_attesa']), current['timestamp']), c, col)
+                        add_patient(Paziente(c, col, comp_stesso_colore(col, current[c]['in_attesa']),\
+                            comp_piu_gravi(col, current[c]['in_attesa']),\
+                                comp_meno_gravi(col, current[c]['in_attesa']), current[c]['timestamp']), c, col)
         
-            elif current['in_attesa'][col] == prev['in_attesa'][col]:
-                if current['in_gestione'][col] > prev['in_gestione'][col]:
-                    aum_gest = current['in_gestione'][col] - prev['in_gestione'][col]
+            elif current[c]['in_attesa'][col] == prev[c]['in_attesa'][col]:
+                if current[c]['in_gestione'][col] > prev[c]['in_gestione'][col]:
+                    aum_gest = current[c]['in_gestione'][col] - prev[c]['in_gestione'][col]
 
                     for i in range(aum_gest):
-                        add_patient(Paziente(c, col, comp_stesso_colore(col, current['in_attesa']),\
-                            comp_piu_gravi(col, current['in_attesa']),\
-                                comp_meno_gravi(col, current['in_attesa']), current['timestamp']), c, col)
+                        add_patient(Paziente(c, col, comp_stesso_colore(col, current[c]['in_attesa']),\
+                            comp_piu_gravi(col, current[c]['in_attesa']),\
+                                comp_meno_gravi(col, current[c]['in_attesa']), current[c]['timestamp']), c, col)
                 
-                    remove_patient(aum_gest, current['timestamp'], c, col)
+                    remove_patient(aum_gest, current[c]['timestamp'], c, col)
         
             else:
-                dim_att = prev['in_attesa'][col] - current['in_attesa'][col]
-                if current['in_attesa'][col] > prev['in_gestione'][col]:
-                    aum_gest = current['in_gestione'][col] - prev['in_gestione'][col]
+                dim_att = prev[c]['in_attesa'][col] - current[c]['in_attesa'][col]
+                if current[c]['in_attesa'][col] > prev[c]['in_gestione'][col]:
+                    aum_gest = current[c]['in_gestione'][col] - prev[c]['in_gestione'][col]
                     n = aum_gest - dim_att
 
                     for i in range(n):
-                        add_patient(Paziente(c, col, comp_stesso_colore(col, current['in_attesa']),
-                        comp_piu_gravi(col, current['in_attesa']),\
-                                comp_meno_gravi(col, current['in_attesa']), current['timestamp']), c, col)
+                        add_patient(Paziente(c, col, comp_stesso_colore(col, current[c]['in_attesa']),
+                        comp_piu_gravi(col, current[c]['in_attesa']),\
+                                comp_meno_gravi(col, current[c]['in_attesa']), current[c]['timestamp']), c, col)
                 
-                    remove_patient(aum_gest, current['timestamp'], c, col)
+                    remove_patient(aum_gest, current[c]['timestamp'], c, col)
             
                 else:
-                    remove_patient(dim_att, current['timestamp'])
+                    remove_patient(dim_att, current[c]['timestamp'], c, col)
             
     set_prev(current)
 
