@@ -255,7 +255,7 @@ def elabora_dati(dati, codice):
                 else:
                     code_ospedale[col].remove(dim_att, ospedale.timestamp)
             
-            prec = ospedale
+        prec = ospedale
 
 DATI = estrai_dati(GIORNO, '014-PS-PS')
 elabora_dati(DATI, '014-PS-PS')
