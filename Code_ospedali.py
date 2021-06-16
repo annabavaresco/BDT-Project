@@ -4,7 +4,6 @@ from Ospedali import *
 from Pazienti import Paziente, comp_meno_gravi, comp_piu_gravi, comp_stesso_colore
 import requests
 import json
-from pprint import pprint
 import time
 
 def from_patient_to_dict(pat: Paziente):
@@ -89,7 +88,7 @@ def remove_patient(num: int, end_timestamp, code, color):
         connection.autocommit = True
         cursor = connection.cursor()
 
-        query = "insert into pazienti_prova (id, colore, ospedale, inizio, fine, durata,\
+        query = "insert into pazienti (id, colore, ospedale, inizio, fine, durata,\
             altri, più_gravi, meno_gravi)\
                 values (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
