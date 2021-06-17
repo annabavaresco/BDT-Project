@@ -7,13 +7,13 @@ from pprint import pprint
 
 #Piccolo pro memoria su come funzionano le timestamps
 
-s1 = '2021-05-30 10:33:26'
-s2 = '2021-05-31 11:15:49' # for example
-FMT = '%Y-%m-%d %H:%M:%S'
-d1 = datetime.strptime(s1, FMT)
-d2 = datetime.strptime(s2, FMT)
-d3 = d1 + timedelta(days=7)
-print(d3)
+# s1 = '2021-05-30 10:33:26'
+# s2 = '2021-05-31 11:15:49' # for example
+# FMT = '%Y-%m-%d %H:%M:%S'
+# d1 = datetime.strptime(s1, FMT)
+# d2 = datetime.strptime(s2, FMT)
+# d3 = d1 + timedelta(days=7)
+# print(d3)
 
 #print(d2-d1)
 

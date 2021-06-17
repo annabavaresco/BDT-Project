@@ -25,7 +25,7 @@ def estrai_dati(giorno_inizio, codice_ospedale):
     query = "SELECT * FROM prova.ers2 WHERE codice_ospedale = %s AND timestamp \
              between %s AND %s"
 
-    oggi = datetime.strptime('2021-06-12 10:40:00', '%Y-%m-%d %H:%M:%S')
+    oggi = datetime.strptime('2021-06-17 10:40:00', '%Y-%m-%d %H:%M:%S')
     cursor.execute(query, [codice_ospedale, giorno_inizio, oggi])
     
     result = cursor.fetchall()
@@ -257,5 +257,5 @@ def elabora_dati(dati, codice):
             
         prec = ospedale
 
-DATI = estrai_dati(GIORNO, '014-PS-PS')
-elabora_dati(DATI, '014-PS-PS')
+DATI = estrai_dati(GIORNO, '001-PS-PS')
+elabora_dati(DATI, '001-PS-PS')
