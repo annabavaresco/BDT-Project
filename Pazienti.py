@@ -8,8 +8,9 @@ from datetime import datetime, timedelta
 #'005-PS-PS'
 #possiamo fare che nella funzione sotto il giorno deve per forza essere lunedì
 
-GIORNO = datetime.strptime('2021-05-04 19:10:00', '%Y-%m-%d %H:%M:%S')
-   
+#GIORNO = datetime.strptime('2021-05-04 19:10:00', '%Y-%m-%d %H:%M:%S')
+GIORNO = datetime.strptime('2021-06-17 10:40:00', '%Y-%m-%d %H:%M:%S')
+
 def estrai_dati(giorno_inizio, codice_ospedale): 
     connection = mysql.connector.connect(
     host = 'emergencyroom.ci8zphg60wmc.us-east-2.rds.amazonaws.com',
@@ -25,7 +26,7 @@ def estrai_dati(giorno_inizio, codice_ospedale):
     query = "SELECT * FROM prova.ers2 WHERE codice_ospedale = %s AND timestamp \
              between %s AND %s"
 
-    oggi = datetime.strptime('2021-06-17 10:40:00', '%Y-%m-%d %H:%M:%S')
+    oggi = datetime.strptime('2021-07-13 15:10:00', '%Y-%m-%d %H:%M:%S')
     cursor.execute(query, [codice_ospedale, giorno_inizio, oggi])
     
     result = cursor.fetchall()
@@ -100,7 +101,7 @@ class Coda:
             connection.autocommit = True
             cursor = connection.cursor()
 
-            query = "insert into pazienti_prova (id, colore, ospedale, inizio, fine, durata,\
+            query = "insert into pazienti_1 (id, colore, ospedale, inizio, fine, durata,\
                 altri, più_gravi, meno_gravi)\
                     values (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
@@ -257,5 +258,5 @@ def elabora_dati(dati, codice):
             
         prec = ospedale
 
-DATI = estrai_dati(GIORNO, '001-PS-PS')
-elabora_dati(DATI, '001-PS-PS')
+DATI = estrai_dati(GIORNO, '001-PS-PSP')
+elabora_dati(DATI, '001-PS-PSP')
